@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Phaser phasycs p2js</title>
+    <style>
+        *{
+            padding: 0;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-con"></div>
+    <script src="/js/lib/phaser.js"></script>
+    <script>
+        var width = window.innerWidth;
+        var height = window.innerHeight;
+
+        var game = new Phaser.Game(width - 100, height - 100, Phaser.AUTO, '#game-con', {preload: preload, create: create, update: update});
+
+        var ball;
+        var paddle;
+        var bricks;
+        var newBrick;
+        var brickInfo;
+        var scoreText;
+        var score = 0;
+
+        var isMoving = false;
+
+        function preload() {
+//            game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
+            game.scale.pageAlignHorizontally = true;
+            game.scale.pageAlignVertically = true;
+            game.stage.backgroundColor = '#eee';
+            game.load.image('ball', '/assets/ball.png');
+        }
+        function create() {
+
+            game.physics.startSystem(Phaser.Physics.P2JS);
+
+            var ballImage = game.cache.getImage('ball');
+
+            var secondBall = window.secondBall = game.add.sprite(game.world.width / 2, game.world.height - 2 * ballImage.height, 'ball')
+
+
+            var ballY = ballImage.height / 2 + 1;
+
+//            ballY = game.world.height - ballImage.height;
+
+            window.ball = game.add.sprite(ballImage.width / 2, ballY, 'ball');
+
+
+//            ball.width = ballImage.width / 2;
+//            ball.height = ballImage.height / 2;
+//            ball.anchor.set(.5, .5);
+
+            game.physics.p2.enable( secondBall, true);
+
+            game.physics.p2.enable(ball, true);
+
+
+            ball.body.mass = 1;
+            ball.body.damping = 0;
+
+//            setTimeout(function(){
+//                console.log(ball.body.velocity)
+//            }, 4000)
+
+//            console.log(ball.body.velocity)
+
+//            ball.body.setCircle(60);
+
+//            ball.body.onWorldBounds = new Phaser.Signal();
+//
+//            ball.body.onWorldBounds.add(function(sprite, up, down, left, right){
+//                if( down ){
+//                    alert('game over!');
+//                    ball.body.velocity.set(0, 0);
+//                    ball.body.gravity.set(0, 0);
+//                    ball.x = ball.y = 0;
+//                    isMoving = false;
+//                }
+//            });
+
+            game.input.onTap.add(function(){
+                if( isMoving ){
+                    return;
+                }
+                isMoving = true;
+                ball.body.gravity.y = 150;
+                ball.body.gravity.x = 0;
+
+                ball.body.velocity.x = 500;
+                ball.body.velocity.y = 0;
+
+                ball.body.collideWorldBounds = true;
+//                ball.body.bounce.set(.6, .6);
+            });
+
+        }
+        function update() {
+//            console.log(ball.body.velocity)
+        }
+
+
+    </script>
+</body>
+</html>

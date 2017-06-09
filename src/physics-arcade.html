@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Phaser phasycs arcade</title>
+    <style>
+        *{
+            padding: 0;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-con"></div>
+    <script src="/js/lib/phaser.js"></script>
+    <script>
+        var width = window.innerWidth;
+        var height = window.innerHeight;
+
+        width = 1334;
+        height = 750;
+
+        var game = new Phaser.Game(width, height, Phaser.AUTO, '#game-con', {preload: preload, create: create, update: update});
+
+        var ball;
+        var paddle;
+        var bricks;
+        var newBrick;
+        var brickInfo;
+        var scoreText;
+        var score = 0;
+
+        var isMoving = false;
+
+        var ballInitPosition = {
+            x : 230,
+            y : 534
+        };
+
+        var shootBallGroup;
+
+        function preload() {
+//            game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
+            game.scale.pageAlignHorizontally = true;
+            game.scale.pageAlignVertically = true;
+            game.stage.backgroundColor = '#eee';
+            game.load.image('ball', '/assets/ball.png');
+            game.load.image('bg', '/rrd-basketball/assets/play-bg.png');
+            game.load.image('hoop', '/rrd-basketball/assets/hoop-all.png');
+            game.load.image('pointer', '/rrd-basketball/assets/pointer.png');
+        }
+        function create() {
+
+            game.physics.startSystem(Phaser.Physics.ARCADE);
+
+
+            var bg = window.bg = game.add.sprite(0, 0, 'bg');
+
+
+            var hoopImage = game.cache.getImage('hoop');
+
+            var hoopGroup = game.add.group();
+
+            hoopGroup.x = game.world.width - hoopImage.width;
+            hoopGroup.y = 149;
+
+
+            var hoop = window.hoop = game.add.sprite(0, 0, 'hoop');
+
+            hoopGroup.add(hoop);
+
+            leftPoint = game.add.graphics(0, 132);
+
+            leftPoint.beginFill(0xff0000);
+            leftPoint.drawCircle(5, 1, 10);
+            leftPoint.endFill();
+
+//            leftPoint.alpha = 0;
+
+            hoopGroup.add(leftPoint);
+
+            game.physics.arcade.enable(leftPoint);
+
+            leftPoint.body.immovable = true;
+
+            //右边触碰点
+//            rightPoint = game.add.graphics(170, 132);
+//
+//            rightPoint.beginFill('#ff0000');
+//            rightPoint.drawCircle(5, 1, 10);
+//            rightPoint.endFill();
+//
+//            hoopGroup.add(rightPoint);
+//
+//            game.physics.arcade.enable(rightPoint);
+//
+//            rightPoint.body.immovable = true;
+
+//            game.physics.arcade.enable(hoop);
+//
+//            hoop.body.immovable = true;
+//
+//            hoop.debug = true;
+
+
+            testLine = game.add.graphics(173, 13);
+
+            testLine.lineStyle(1, 0xff0000, 1);
+            testLine.moveTo(0, 0);
+            testLine.lineTo( 0, 182);
+
+            hoopGroup.add(testLine);
+
+//            testLine.beginFill(0xff0000, 1);
+//
+//            testLine.drawRect(0, 0, 200, 100);
+//
+//            testLine.endFill();
+
+            game.physics.arcade.enable(testLine);
+
+            testLine.body.immovable = true;
+
+//            testLine.beginFill(0xff0000, 1);
+//
+//            testLine.drawRect(0, 0, 200, 100);
+//
+//            testLine.endFill();
+
+            game.physics.arcade.enable(testLine);
+
+            testLine.body.immovable = true;
+
+
+            //地板碰撞
+            floorLine = game.add.graphics(0, 534);
+
+            floorLine.lineStyle(1, 0xff0000, 1);
+            floorLine.moveTo(0, 0);
+            floorLine.lineTo( game.world.width, 0);
+//            floorLine.alpha = 0;
+            game.physics.arcade.enable(floorLine);
+
+            floorLine.body.immovable = true;
+
+
+            //控制方向的group, 包含一个篮球+指针
+            directionGroup = game.add.group();
+
+            var ball = createBall();
+
+            ball.body.allowGravity = false;
+            ball.body.velocity.set(0, 0);
+            ball.body.gravity.set(0, 0);
+            ball.inputEnabled = true;
+
+            ball.input.start(0, true);
+
+            var ballPointerId = -1;
+
+            ball.events.onInputDown.add(function(sprite, pointer){
+                console.log('onInputDown: ', pointer);
+                ballPointerId = pointer.id;
+            });
+
+            ball.events.onInputOut.add(function(sprite, pointer){
+                console.log('onInputOut:', pointer);
+                ballPointerId = -1;
+            });
+
+            ball.events.onInputUp.add(function(sprite, pointer){
+                console.log('onInputUp:', pointer);
+                if( ballPointerId >= 0 ){
+                    //在篮球上松开手指, 投出篮球
+                    ballPointerId = -1;
+                    var currentDegree = pointerImage.angle ;
+                    var x = 200 * Math.sin(currentDegree);
+                    var y = 200 * Math.cos(currentDegree);
+                    shootBall(ballInitPosition, { x : x, y : y});
+                }
+
+            });
+
+            game.input.addMoveCallback(function(pointer, x, y){
+                if( pointer.id === ballPointerId ){
+//                    var angle = game.physics.arcade.angleToPointer(ball, pointer);
+                    var angle = game.physics.arcade.angleToXY(pointerImage, x, y);
+                    console.log('angle: ', angle);
+                    pointerImage.rotation = angle ;
+                }
+            }, game);
+
+
+//            ball.events.onDragStart.add( function(){
+//
+//            }, ball);
+//            ball.events.onDragUpdate.add(function(){});
+//            ball.events.onDragStop.add(dragStop, ball);
+
+
+            directionGroup.add(ball);
+
+            pointerImage = game.add.image(230, 534, 'pointer');
+            pointerImage.anchor.set(0, 1);
+
+
+            //组需要放在最后面
+            shootBallGroup = game.add.group();
+//            shootBallGroup.enableBody = true;
+//            shootBallGroup.onChildInputUp.add(function(sprite, pointer, isOver){
+//                console.log( sprite, pointer, isOver);
+//            });
+
+        }
+
+        function createBall(){
+            var ballImage = game.cache.getImage('ball');
+
+            var ball = game.add.sprite(230, 534, 'ball');
+            ball.anchor.set(.5, .5);
+
+            game.physics.arcade.enable(ball);
+
+
+            ball.scale.set(.7);
+
+            ball.body.gravity.y = 4000;
+
+            ball.body.bounce.y = .75;
+            ball.body.bounce.x = .5;
+
+            return ball;
+        }
+
+        function update() {
+            game.physics.arcade.collide(shootBallGroup, leftPoint);
+            game.physics.arcade.collide(shootBallGroup, floorLine);
+            game.physics.arcade.collide(shootBallGroup, testLine);
+        }
+
+        function dragStop(ball, point){
+//            console.log( ball.body, point);
+
+            var startPoint = ball.input.dragStartPoint;
+            var speedX = ( point.x - startPoint.x) * 6;
+            var speedY = ( point.y - startPoint.y ) * 5;
+//            ball.body.velocity.set( speedX, speedY);
+//
+//            ball.x = point.x;
+//            ball.y = point.y;
+//            ball.body.velocity.y = 100;
+
+            shootBall( ballInitPosition, { x : speedX, y : speedY} );
+
+        }
+
+        function shootBall(position, velocity){
+            var ball = createBall();
+            game.physics.arcade.enable(ball);
+            ball.body.allowGravity = true;
+
+            ball.body.collideWorldBounds = true;
+
+            shootBallGroup.add(ball);
+
+            ball.x = position.x;
+            ball.y = position.y;
+
+            ball.body.velocity.set(velocity.x, velocity.y);
+
+            ball.body.gravity.y = 4000;
+
+            ball.body.onWorldBounds = new Phaser.Signal();
+
+            ball.body.onWorldBounds.add(function(sprite, up, down, left, right){
+                if( right || down ){
+//                    alert('game over!');
+//                    ball.body.velocity.set(0, 0);
+//                    ball.body.gravity.set(0, 0);
+//                    ball.x = 0;
+//                    ball.y = ( game.world.height - ball.height ) / 2;
+//                    isMoving = false;
+                    sprite.kill();
+                }
+            });
+        }
+
+
+    </script>
+</body>
+</html>
