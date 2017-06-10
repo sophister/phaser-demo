@@ -39,6 +39,16 @@
 
         var shootBallGroup;
 
+        //投篮的力度
+        var currentForce = 1;
+        var forceMin = 1;
+        var forceMax = 100;
+        var forceTween = null;
+
+        //方向控制, 只允许指正在 第一象限 运动
+        var pointerRotationMin = - Math.PI / 2;
+        var pointerRotationMax = 0;
+
         function preload() {
 //            game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
             game.scale.pageAlignHorizontally = true;
@@ -48,6 +58,8 @@
             game.load.image('bg', '/rrd-basketball/assets/play-bg.png');
             game.load.image('hoop', '/rrd-basketball/assets/hoop-all.png');
             game.load.image('pointer', '/rrd-basketball/assets/pointer.png');
+            game.load.image('forceBg', '/rrd-basketball/assets/force-bg.png');
+            game.load.image('forceProgress', '/rrd-basketball/assets/force-progress.png');
         }
         function create() {
 
@@ -144,10 +156,32 @@
             floorLine.body.immovable = true;
 
 
+            //力量控制进度条
+            var forceGroup = game.add.group();
+            forceGroup.x = 443;
+            forceGroup.y = 618;
+
+            var forceBg = forceGroup.create(0, 0, 'forceBg');
+
+            forceProgress = forceGroup.create(6, 4, 'forceProgress');
+
+            forceProgress.scale.x = .1;
+
+            forceTween = game.add.tween(forceProgress.scale);
+
+            forceTween.to({ x : 1, y : 1 }, 2000, null, false, 0, -1);
+
+            forceTween.yoyo(true, 100);
+
+//            forceTween.start();
+
+
             //控制方向的group, 包含一个篮球+指针
             directionGroup = game.add.group();
 
             var ball = createBall();
+
+            window.directionBall = ball;
 
             ball.body.allowGravity = false;
             ball.body.velocity.set(0, 0);
@@ -160,22 +194,38 @@
 
             ball.events.onInputDown.add(function(sprite, pointer){
                 console.log('onInputDown: ', pointer);
-                ballPointerId = pointer.id;
+                if( ballPointerId < 0 ){
+                    ballPointerId = pointer.id;
+                    if( forceTween.isPaused ){
+                        forceTween.resume();
+                    }else{
+                        forceTween.start();
+                    }
+
+                }
+
             });
 
-            ball.events.onInputOut.add(function(sprite, pointer){
-                console.log('onInputOut:', pointer);
-                ballPointerId = -1;
-            });
+//            ball.events.onInputOut.add(function(sprite, pointer){
+//                console.log('onInputOut:', pointer);
+//                ballPointerId = -1;
+//            });
 
             ball.events.onInputUp.add(function(sprite, pointer){
                 console.log('onInputUp:', pointer);
                 if( ballPointerId >= 0 ){
                     //在篮球上松开手指, 投出篮球
+                    var force = forceProgress.scale.x;
+                    console.log( 'scale.x', force);
+                    forceTween.pause();
+
+                    var speed  = force * 3000;
+
                     ballPointerId = -1;
-                    var currentDegree = pointerImage.angle ;
-                    var x = 200 * Math.sin(currentDegree);
-                    var y = 200 * Math.cos(currentDegree);
+                    var currentDegree = Math.abs(pointerImage.rotation );
+                    var x = speed * Math.cos(currentDegree);
+                    var y = -speed * Math.sin(currentDegree);
+                    console.log(currentDegree, x, y);
                     shootBall(ballInitPosition, { x : x, y : y});
                 }
 
@@ -185,7 +235,10 @@
                 if( pointer.id === ballPointerId ){
 //                    var angle = game.physics.arcade.angleToPointer(ball, pointer);
                     var angle = game.physics.arcade.angleToXY(pointerImage, x, y);
-                    console.log('angle: ', angle);
+
+                    angle = Math.max( angle, pointerRotationMin);
+                    angle = Math.min( angle, pointerRotationMax);
+//                    console.log('angle: ', angle);
                     pointerImage.rotation = angle ;
                 }
             }, game);
