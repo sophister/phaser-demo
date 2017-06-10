@@ -69,6 +69,15 @@
             var bg = window.bg = game.add.sprite(0, 0, 'bg');
 
 
+            //得分
+            scoreText = game.add.text(game.world.width / 2, 0, '得分: ' + score, {
+                fill : '#ff0000',
+                fontSize : '40px'
+            });
+
+            scoreText.anchor.set(.5, 0);
+
+            //蓝框组
             var hoopImage = game.cache.getImage('hoop');
 
             var hoopGroup = game.add.group();
@@ -176,6 +185,10 @@
 //            forceTween.start();
 
 
+            //组需要放在最后面
+            shootBallGroup = game.add.group();
+
+
             //控制方向的group, 包含一个篮球+指针
             directionGroup = game.add.group();
 
@@ -257,13 +270,6 @@
             pointerImage.anchor.set(0, 1);
 
 
-            //组需要放在最后面
-            shootBallGroup = game.add.group();
-//            shootBallGroup.enableBody = true;
-//            shootBallGroup.onChildInputUp.add(function(sprite, pointer, isOver){
-//                console.log( sprite, pointer, isOver);
-//            });
-
         }
 
         function createBall(){
@@ -287,8 +293,31 @@
 
         function update() {
             game.physics.arcade.collide(shootBallGroup, leftPoint);
-            game.physics.arcade.collide(shootBallGroup, floorLine);
+            game.physics.arcade.collide(shootBallGroup, floorLine, ballCollideFloor);
             game.physics.arcade.collide(shootBallGroup, testLine);
+
+            checkBallInHoop();
+
+            scoreText.text = '得分: ' + score;
+        }
+
+        function ballCollideFloor(floor, ball){
+            ball.hasTouchFloor = true;
+        }
+
+        //检查发射组内活着的ball, 看是否投进了
+        function checkBallInHoop(){
+            shootBallGroup.forEachAlive(function(ball){
+                if( ! ball.hasScored && ! ball.hasTouchFloor ){
+                    //如果该篮球未碰到地面, 且还未得分过, 则判断能否得分
+                    var x = ball.x;
+                    var y = ball.y;
+                    if( y >= 286 && y <= 304 && x >= 990 && x <= 1140 ){
+                        score++;
+                        ball.hasScored = true;
+                    }
+                }
+            });
         }
 
         function dragStop(ball, point){
@@ -308,34 +337,47 @@
         }
 
         function shootBall(position, velocity){
-            var ball = createBall();
-            game.physics.arcade.enable(ball);
-            ball.body.allowGravity = true;
+            var ball = shootBallGroup.getFirstDead();
 
-            ball.body.collideWorldBounds = true;
+            if( ! ball ){
+                ball = createBall();
+                shootBallGroup.add(ball);
+                game.physics.arcade.enable(ball);
+                ball.body.allowGravity = true;
 
-            shootBallGroup.add(ball);
+                ball.body.collideWorldBounds = true;
 
-            ball.x = position.x;
-            ball.y = position.y;
+                ball.x = position.x;
+                ball.y = position.y;
 
-            ball.body.velocity.set(velocity.x, velocity.y);
+                ball.body.onWorldBounds = new Phaser.Signal();
 
-            ball.body.gravity.y = 4000;
-
-            ball.body.onWorldBounds = new Phaser.Signal();
-
-            ball.body.onWorldBounds.add(function(sprite, up, down, left, right){
-                if( right || down ){
+                ball.body.onWorldBounds.add(function(sprite, up, down, left, right){
+                    if( right || down || left ){
 //                    alert('game over!');
 //                    ball.body.velocity.set(0, 0);
 //                    ball.body.gravity.set(0, 0);
 //                    ball.x = 0;
 //                    ball.y = ( game.world.height - ball.height ) / 2;
 //                    isMoving = false;
-                    sprite.kill();
-                }
-            });
+                        sprite.kill();
+                    }
+                });
+            }else{
+                //从池子中复用的篮球
+                ball.reset(position.x, position.y);
+            }
+
+            //重置标记位
+            //该球在本次投篮中, 是否已经得分了
+            ball.hasScored = false;
+            //该球在本次投篮中, 是否已经接触了地面
+            ball.hasTouchFloor = false;
+
+            ball.body.velocity.set(velocity.x, velocity.y);
+
+            ball.body.gravity.y = 4000;
+
         }
 
 
